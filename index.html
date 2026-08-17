@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Reaction Lights — F1 Start Challenge</title>
+
+<!--
+  ============================================================================
+  REUSABLE TEMPLATE — Player Sign-In / Master Record / Settings
+  ============================================================================
+  Drop this whole file into a new game project, then:
+    1. Change the <title> above.
+    2. Replace SCRIPT_URL (search "PASTE_YOUR") with the Master Record
+       Google Apps Script Web App URL shared across the game suite.
+    3. Rename GAME_ID (used to namespace localStorage so different games
+       don't clobber each other's saved settings / last-student info).
+    4. Edit GAME_TITLE / GAME_TAGLINE / GAME_EYEBROW / GAME_VERB placeholders
+       in the HTML below.
+    5. Add your own game screens after #screen-loading. The setup screen
+       calls startGame() -> hides itself and fires a custom event
+       "game:start" with the student object {name, grade, section, teacher,
+       avatar}. Listen for that event in your game code — don't edit this
+       file's flow logic.
+    6. The Settings button (#btn-settings) is fixed-position and appears on
+       EVERY screen automatically — no per-screen wiring needed.
+  ============================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@500;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ THEME TOKENS ============
+     Each theme is a full set of CSS variables, switched via [data-theme] on
+     <html>. Add more by copying a block and adding it to THEMES in JS. */
+  :root, [data-theme="meadow"]{
+    --bg1:#EAF7EE; --bg2:#CDF2DC;
+    --surface:#FFFFFF; --surface2:#F2FBF6;
+    --ink:#0F3D2E; --ink-dim:#5C8A73;
+    --accent:#10B981; --accent-dark:#059669; --accent-deep:#065F46; --accent-light:#8DEBBA;
+    --coral:#FB7185; --coral-dark:#E11D48; --gold:#F5B301;
+    --line:rgba(6,95,70,0.16);
+    --shadow:0 10px 26px rgba(6,95,70,0.16);
+    --blob1:#8DEBBA; --blob2:#F5B301; --blob3:#FB7185;
+  }
+  [data-theme="nightlab"]{
+    --bg1:#0B1220; --bg2:#0F1B2E;
+    --surface:#152238; --surface2:#0E1A2E;
+    --ink:#EAF2FF; --ink-dim:#8CA3C4;
+    --accent:#F5B301; --accent-dark:#D99A00; --accent-deep:#8A5E00; --accent-light:#FFD866;
+    --coral:#FB7185; --coral-dark:#E11D48; --gold:#F5B301;
+    --line:rgba(245,179,1,0.2);
+    --shadow:0 10px 30px rgba(0,0,0,0.5);
+    --blob1:#F5B301; --blob2:#8B5CF6; --blob3:#22D3EE;
+  }
+  [data-theme="coral-reef"]{
+    --bg1:#FFF1EE; --bg2:#FFDCD3;
+    --surface:#FFFFFF; --surface2:#FFF6F3;
+    --ink:#5A1F17; --ink-dim:#9C6A5E;
+    --accent:#FB7185; --accent-dark:#E11D48; --accent-deep:#8A1030; --accent-light:#FFB3BE;
+    --coral:#FB7185; --coral-dark:#E11D48; --gold:#F5B301;
+    --line:rgba(138,16,48,0.16);
+    --shadow:0 10px 26px rgba(138,16,48,0.16);
+    --blob1:#FFB3BE; --blob2:#F5B301; --blob3:#8DEBBA;
+  }
+  [data-theme="grape-soda"]{
+    --bg1:#F3EEFF; --bg2:#E1D2FF;
+    --surface:#FFFFFF; --surface2:#F8F4FF;
+    --ink:#2E1A5C; --ink-dim:#7C6BA3;
+    --accent:#8B5CF6; --accent-dark:#6D28D9; --accent-deep:#4C1D95; --accent-light:#C4B3FF;
+    --coral:#FB7185; --coral-dark:#E11D48; --gold:#F5B301;
+    --line:rgba(76,29,149,0.16);
+    --shadow:0 10px 26px rgba(76,29,149,0.16);
+    --blob1:#C4B3FF; --blob2:#FB7185; --blob3:#F5B301;
+  }
+  [data-theme="solar-flare"]{
+    --bg1:#FFF4E6; --bg2:#FFDDAE;
+    --surface:#FFFFFF; --surface2:#FFF7EC;
+    --ink:#5C2E0A; --ink-dim:#A67953;
+    --accent:#F97316; --accent-dark:#C2410C; --accent-deep:#7C2D12; --accent-light:#FDBA74;
+    --coral:#FB7185; --coral-dark:#E11D48; --gold:#FACC15;
+    --line:rgba(124,45,18,0.16);
+    --shadow:0 10px 26px rgba(124,45,18,0.16);
+    --blob1:#FDBA74; --blob2:#FACC15; --blob3:#FB7185;
+  }
+  [data-theme="deep-ocean"]{
+    --bg1:#E6F6FB; --bg2:#BFE9F5;
+    --surface:#FFFFFF; --surface2:#F0FAFD;
+    --ink:#063846; --ink-dim:#4C8494;
+    --accent:#0891B2; --accent-dark:#0E7490; --accent-deep:#164E63; --accent-light:#67E8F9;
+    --coral:#FB7185; --coral-dark:#E11D48; --gold:#F5B301;
+    --line:rgba(22,78,99,0.16);
+    --shadow:0 10px 26px rgba(22,78,99,0.16);
+    --blob1:#67E8F9; --blob2:#0891B2; --blob3:#F5B301;
+  }
+  [data-theme="cyber-neon"]{
+    --bg1:#0A0E17; --bg2:#0D1424;
+    --surface:#101A2E; --surface2:#0B1424;
+    --ink:#E7FCFF; --ink-dim:#7FA8B8;
+    --accent:#22D3EE; --accent-dark:#0891B2; --accent-deep:#155E75; --accent-light:#67E8F9;
+    --coral:#FF2E88; --coral-dark:#D6006B; --gold:#F5B301;
+    --line:rgba(34,211,238,0.22);
+    --shadow:0 10px 30px rgba(0,0,0,0.55);
+    --blob1:#22D3EE; --blob2:#FF2E88; --blob3:#8B5CF6;
+  }
+  [data-theme="cherry-blossom"]{
+    --bg1:#FFF1F6; --bg2:#FFDCE9;
+    --surface:#FFFFFF; --surface2:#FFF7FA;
+    --ink:#6B1D40; --ink-dim:#B3728F;
+    --accent:#EC4899; --accent-dark:#DB2777; --accent-deep:#831843; --accent-light:#FBCFE8;
+    --coral:#FB7185; --coral-dark:#E11D48; --gold:#F5B301;
+    --line:rgba(131,24,67,0.16);
+    --shadow:0 10px 26px rgba(131,24,67,0.16);
+    --blob1:#FBCFE8; --blob2:#F5B301; --blob3:#8DEBBA;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{margin:0; height:100%; overscroll-behavior:none;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--accent-light) 45%, transparent) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
+    color:var(--ink); font-family:"Nunito","Trebuchet MS",sans-serif; min-height:100vh;
+    transition:background .3s ease, color .3s ease;
+    overflow-x:hidden;
+  }
+
+  /* ---- floating decorative blobs (signature background motion) ---- */
+  .blob{
+    position:fixed; border-radius:50%; filter:blur(38px); opacity:.35; z-index:0;
+    pointer-events:none; animation:drift 16s ease-in-out infinite;
+  }
+  .blob.b1{ width:220px; height:220px; background:var(--blob1); top:-60px; left:-60px; animation-duration:18s; }
+  .blob.b2{ width:180px; height:180px; background:var(--blob2); bottom:10%; right:-70px; animation-duration:14s; animation-delay:-4s; }
+  .blob.b3{ width:150px; height:150px; background:var(--blob3); top:40%; left:-80px; animation-duration:20s; animation-delay:-8s; }
+  @keyframes drift{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(24px,-28px) scale(1.08); }
+  }
+  @media (prefers-reduced-motion: reduce){ .blob{ animation:none; } }
+
+  #app{ max-width:640px; margin:0 auto; min-height:100vh; position:relative; padding:16px; z-index:1; }
+  .screen{ display:none; }
+  .screen.active{ display:block; animation:fadeIn .35s ease; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+  h1,h2,h3{ font-family:"Baloo 2","Trebuchet MS",sans-serif; letter-spacing:.01em; margin:0 0 6px; color:var(--accent-deep); }
+  [data-theme="nightlab"] h1, [data-theme="nightlab"] h2, [data-theme="nightlab"] h3,
+  [data-theme="cyber-neon"] h1, [data-theme="cyber-neon"] h2, [data-theme="cyber-neon"] h3{ color:var(--accent-light); }
+
+  .eyebrow{
+    font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--accent-dark); text-align:center; margin-bottom:6px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); animation:pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:.4;} 50%{opacity:1;} }
+  @media (prefers-reduced-motion: reduce){ .eyebrow .dot{ animation:none; } }
+
+  .title{
+    text-align:center; font-size:30px; margin-bottom:2px; font-weight:800;
+    text-shadow:0 2px 0 color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .sub{ text-align:center; color:var(--ink-dim); font-size:14px; max-width:440px; margin:6px auto 18px; line-height:1.5;}
+
+  /* ---- signature "player card" with holographic rotating border ---- */
+  .card-wrap{ position:relative; max-width:440px; margin:0 auto 14px; border-radius:22px; padding:2px; }
+  .card-wrap::before{
+    content:""; position:absolute; inset:0; border-radius:22px; padding:2px;
+    background:conic-gradient(from 0deg, var(--accent), var(--gold), var(--coral), var(--accent-light), var(--accent));
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude;
+    animation:spin 6s linear infinite; opacity:.85;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce){ .card-wrap::before{ animation:none; } }
+
+  .card{
+    position:relative;
+    background:linear-gradient(180deg, var(--surface) 0%, var(--surface2) 100%);
+    border-radius:20px; padding:20px;
+    box-shadow:var(--shadow);
+  }
+
+  label{ display:block; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin:12px 0 6px; font-weight:700;}
+
+  /* ---- avatar picker ---- */
+  .avatar-row{ display:flex; gap:8px; overflow-x:auto; padding:2px 0 6px; scrollbar-width:none; }
+  .avatar-row::-webkit-scrollbar{ display:none; }
+  .avatar-btn{
+    flex:0 0 auto; width:52px; height:52px; border-radius:50%; font-size:24px;
+    border:2px solid var(--line); background:var(--surface2); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:transform .15s ease, border-color .15s ease;
+  }
+  .avatar-btn.selected{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 16%, var(--surface2)); transform:scale(1.08); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+
+  input[type=text], select{
+    width:100%; padding:12px 12px; border-radius:12px; border:1.5px solid var(--line);
+    background:var(--surface2); color:var(--ink); font-size:15px; font-family:"Nunito",sans-serif; font-weight:700;
+  }
+  select{ appearance:none; background-image:linear-gradient(45deg, transparent 50%, var(--ink-dim) 50%), linear-gradient(135deg, var(--ink-dim) 50%, transparent 50%); background-position:calc(100% - 18px) 22px, calc(100% - 12px) 22px; background-size:6px 6px; background-repeat:no-repeat; }
+
+  .setup-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+
+  .setup-error{ color:var(--coral-dark); font-size:13px; font-weight:700; text-align:center; min-height:18px; margin-top:8px;}
+
+  .btn{
+    position:relative; width:100%; margin-top:18px; padding:15px; border:none; border-radius:14px;
+    background:linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+    color:#fff; font-family:"Baloo 2",sans-serif; font-weight:800; font-size:17px;
+    letter-spacing:.03em;
+    cursor:pointer; box-shadow:0 6px 0 var(--accent-deep); overflow:hidden;
+  }
+  .btn:active{ transform:translateY(3px); box-shadow:0 3px 0 var(--accent-deep); }
+  .btn::after{
+    content:""; position:absolute; top:0; left:-60%; width:40%; height:100%;
+    background:linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
+    animation:shine 2.6s ease-in-out infinite;
+  }
+  @keyframes shine{ 0%{ left:-60%; } 60%,100%{ left:130%; } }
+  @media (prefers-reduced-motion: reduce){ .btn::after{ animation:none; display:none; } }
+
+  .lb-chip{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    max-width:260px; margin:14px auto 0; padding:9px 16px; border-radius:999px;
+    background:var(--surface2); border:1.5px solid var(--line); color:var(--ink-dim);
+    font-size:13px; font-weight:700; text-decoration:none; cursor:pointer;
+  }
+
+  /* ============ SETTINGS BUTTON ============ */
+  #btn-settings{
+    position:fixed; top:14px; right:14px; z-index:500;
+    width:44px; height:44px; border-radius:50%; border:1.5px solid var(--line);
+    background:var(--surface); color:var(--ink); font-size:20px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:var(--shadow); cursor:pointer; transition:transform .2s ease;
+  }
+  #btn-settings:active{ transform:rotate(35deg); }
+
+  /* ============ SETTINGS MODAL ============ */
+  #settings-overlay{
+    display:none; position:fixed; inset:0; z-index:600;
+    background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:20px;
+    backdrop-filter:blur(2px);
+  }
+  #settings-overlay.active{ display:flex; }
+  .settings-modal{
+    background:linear-gradient(180deg, var(--surface) 0%, var(--surface2) 100%);
+    border-radius:20px; padding:22px; max-width:400px; width:100%;
+    box-shadow:var(--shadow); border:1px solid var(--line);
+    animation:popIn .25s ease;
+  }
+  @keyframes popIn{ from{ opacity:0; transform:scale(.92); } to{ opacity:1; transform:none; } }
+  .settings-modal h2{ text-align:center; margin-bottom:16px; }
+  .settings-section{ margin-bottom:18px; }
+  .settings-section label{ margin-bottom:10px; }
+
+  .theme-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .theme-card{ text-align:center; cursor:pointer; }
+  .theme-swatch{
+    height:44px; border-radius:12px; border:2px solid transparent; position:relative;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .theme-card.selected .theme-swatch{ border-color:var(--ink); }
+  .theme-swatch .check{ color:#fff; font-size:16px; font-weight:800; text-shadow:0 1px 2px rgba(0,0,0,.4); display:none; }
+  .theme-card.selected .theme-swatch .check{ display:block; }
+  .theme-name{ font-size:10px; font-weight:700; color:var(--ink-dim); margin-top:5px; display:block; }
+
+  .switch-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; border-radius:12px; background:var(--surface2); border:1.5px solid var(--line);
+    margin-bottom:8px;
+  }
+  .switch-row .label-inline{ font-weight:800; font-size:14px; color:var(--ink); display:flex; align-items:center; gap:8px; }
+  .switch{ position:relative; width:46px; height:26px; border-radius:999px; background:var(--line); border:none; cursor:pointer; flex:0 0 auto; transition:background .2s ease; }
+  .switch::before{ content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:transform .2s ease; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+  .switch.on{ background:var(--accent); }
+  .switch.on::before{ transform:translateX(20px); }
+
+  #btn-settings-close{
+    width:100%; margin-top:6px; padding:13px; border:none; border-radius:14px;
+    background:var(--surface2); border:1.5px solid var(--line); color:var(--ink);
+    font-family:"Baloo 2",sans-serif; font-weight:800; font-size:15px; cursor:pointer;
+  }
+
+  /* ============ RACE SCREEN ============ */
+  .race-wrap{ max-width:460px; margin:0 auto; padding-top:6px; }
+  .trial-pill{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    font-family:"JetBrains Mono",ui-monospace,monospace; font-size:12px; font-weight:700;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:14px;
+  }
+  .trial-dots{ display:flex; gap:6px; }
+  .trial-dot{ width:8px; height:8px; border-radius:50%; background:var(--line); }
+  .trial-dot.done{ background:var(--accent); }
+  .trial-dot.current{ background:var(--gold); box-shadow:0 0 0 3px color-mix(in srgb, var(--gold) 30%, transparent); }
+
+  /* --- F1 light gantry --- */
+  .gantry{
+    background:linear-gradient(180deg,#1a1a1a,#000);
+    border-radius:18px; padding:18px 26px; margin:0 auto 18px; max-width:280px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4), inset 0 0 0 3px #2a2a2a;
+    position:relative;
+  }
+  .gantry::before, .gantry::after{
+    content:""; position:absolute; top:-8px; width:14px; height:26px; background:#2a2a2a; border-radius:3px;
+  }
+  .gantry::before{ left:14px; } .gantry::after{ right:14px; }
+  .lights-row{ display:flex; justify-content:center; gap:16px; }
+  .light{
+    width:52px; height:52px; border-radius:50%; background:#2a1010;
+    box-shadow:inset 0 3px 6px rgba(0,0,0,.6), 0 0 0 4px #111;
+    transition:background .15s ease, box-shadow .15s ease;
+  }
+  .light.orange{ background:#3a2a10; }
+  .light.green{ background:#0f2a12; }
+  .light.red.lit{ background:radial-gradient(circle at 35% 30%, #ff6b5c, #d61f0e); box-shadow:inset 0 3px 6px rgba(0,0,0,.3), 0 0 22px 6px rgba(255,40,20,.85), 0 0 0 4px #111; }
+  .light.orange.lit{ background:radial-gradient(circle at 35% 30%, #ffcf6b, #e08a00); box-shadow:inset 0 3px 6px rgba(0,0,0,.3), 0 0 22px 6px rgba(255,170,0,.85), 0 0 0 4px #111; }
+  .light.green.lit{ background:radial-gradient(circle at 35% 30%, #7dffa0, #0fbf3f); box-shadow:inset 0 3px 6px rgba(0,0,0,.3), 0 0 26px 8px rgba(30,255,90,.9), 0 0 0 4px #111; }
+
+  #btn-launch{
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    width:100%; max-width:280px; margin:4px auto 0; padding:16px;
+    border:none; border-radius:16px; cursor:pointer;
+    background:linear-gradient(180deg, var(--coral) 0%, var(--coral-dark) 100%);
+    color:#fff; font-family:"Baloo 2",sans-serif; font-weight:800; font-size:19px; letter-spacing:.04em;
+    box-shadow:0 7px 0 color-mix(in srgb, var(--coral-dark) 70%, black); transition:transform .08s ease, box-shadow .08s ease;
+  }
+  #btn-launch:active{ transform:translateY(4px); box-shadow:0 3px 0 color-mix(in srgb, var(--coral-dark) 70%, black); }
+  #btn-launch.armed{ background:linear-gradient(180deg, var(--gold) 0%, #c98b00 100%); box-shadow:0 7px 0 #8a5e00; }
+  #btn-launch:disabled{ opacity:.55; cursor:default; }
+  #btn-launch .key-hint{
+    font-family:"JetBrains Mono",ui-monospace,monospace; font-size:10px; font-weight:600;
+    letter-spacing:.06em; text-transform:uppercase; opacity:.8;
+  }
+  @media (hover:none){ #btn-launch .key-hint{ display:none; } }
+
+  /* --- track --- */
+  .track{
+    position:relative; height:86px; border-radius:14px; overflow:hidden; margin-bottom:8px;
+    background:repeating-linear-gradient(180deg, #3a3a3a 0 6px, #333 6px 12px);
+  }
+  .track::before{
+    content:""; position:absolute; top:50%; left:0; right:0; height:3px; transform:translateY(-50%);
+    background:repeating-linear-gradient(90deg, #fff 0 18px, transparent 18px 34px); opacity:.5;
+  }
+  .track .flag-line{ position:absolute; top:0; bottom:0; right:6%; width:8px; background:repeating-conic-gradient(#111 0 25%, #fff 0 50%) 0 0/10px 10px; }
+  .car{
+    position:absolute; top:50%; left:0; transform:translate(-10px,-50%); font-size:34px; line-height:1;
+    filter:drop-shadow(0 4px 4px rgba(0,0,0,.5));
+  }
+  .track-caption{ text-align:center; font-size:12px; color:var(--ink-dim); font-weight:700; margin-bottom:16px; min-height:16px; }
+
+  /* --- result / summary dialogs --- */
+  .result-modal .settings-modal{ max-width:340px; text-align:center; }
+  .result-time{ font-family:"JetBrains Mono",ui-monospace,monospace; font-weight:700; font-size:44px; color:var(--accent-deep); margin:6px 0 2px; }
+  [data-theme="nightlab"] .result-time, [data-theme="cyber-neon"] .result-time{ color:var(--accent-light); }
+  .result-unit{ font-size:14px; color:var(--ink-dim); font-weight:700; margin-bottom:14px; }
+  .result-tag{
+    display:inline-block; padding:5px 14px; border-radius:999px; font-size:12px; font-weight:800;
+    letter-spacing:.04em; text-transform:uppercase; background:var(--accent-light); color:var(--accent-deep); margin-bottom:6px;
+  }
+  .summary-table{ width:100%; border-collapse:collapse; margin:10px 0 16px; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:13px; }
+  .summary-table td{ padding:7px 4px; border-bottom:1px solid var(--line); }
+  .summary-table td:last-child{ text-align:right; font-weight:700; }
+  .summary-avg{ font-size:34px; font-weight:700; color:var(--accent-deep); font-family:"JetBrains Mono",ui-monospace,monospace; }
+  [data-theme="nightlab"] .summary-avg, [data-theme="cyber-neon"] .summary-avg{ color:var(--accent-light); }
+
+  .trivia-box{
+    text-align:left; margin:14px 0 4px; padding:12px 14px; border-radius:14px;
+    background:var(--surface2); border:1.5px solid var(--line);
+  }
+  .trivia-label{
+    font-family:"JetBrains Mono",ui-monospace,monospace; font-size:10px; font-weight:700;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--accent-dark); margin-bottom:4px;
+  }
+  .trivia-text{ font-size:13px; line-height:1.5; color:var(--ink); margin:0; font-weight:600; }
+
+  /* --- reaction rank / comparison card --- */
+  .rank-box{
+    text-align:left; margin:14px 0 4px; padding:14px 16px; border-radius:14px;
+    background:var(--surface2); border:1.5px solid var(--line);
+  }
+  .rank-head{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .rank-badge{
+    flex:0 0 auto; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    font-family:"Baloo 2","Trebuchet MS",sans-serif; font-weight:800; font-size:20px; color:#fff;
+    background:linear-gradient(160deg, var(--accent), var(--accent-dark));
+    box-shadow:0 4px 10px color-mix(in srgb, var(--accent-dark) 45%, transparent);
+  }
+  .rank-title{ font-weight:800; font-size:15px; color:var(--ink); line-height:1.2; }
+  .rank-blurb{ font-size:13px; line-height:1.55; color:var(--ink); margin:0 0 8px; font-weight:600; }
+  .rank-compare{
+    font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11.5px; color:var(--ink-dim);
+    line-height:1.6; margin:0; font-weight:600;
+  }
+  .rank-caution{
+    margin-top:10px; padding:9px 11px; border-radius:10px; font-size:12.5px; line-height:1.5; font-weight:700;
+    background:color-mix(in srgb, var(--coral) 16%, transparent); color:var(--coral-dark); border:1.5px solid color-mix(in srgb, var(--coral) 45%, transparent);
+  }
+</style>
+</head>
+<body>
+
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+<div class="blob b3"></div>
+
+<div id="app">
+
+  <!-- SETTINGS BUTTON — fixed, present on every screen -->
+  <button id="btn-settings" title="Settings">⚙️</button>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-overlay">
+    <div class="settings-modal">
+      <h2>⚙️ Settings</h2>
+
+      <div class="settings-section">
+        <label>Theme</label>
+        <div class="theme-grid" id="theme-grid"><!-- populated by JS --></div>
+      </div>
+
+      <div class="settings-section">
+        <label>Audio</label>
+        <div class="switch-row">
+          <span class="label-inline">🎵 Music</span>
+          <button class="switch" id="btn-music-toggle"></button>
+        </div>
+        <div class="switch-row">
+          <span class="label-inline">🔊 Sound FX</span>
+          <button class="switch" id="btn-sfx-toggle"></button>
+        </div>
+      </div>
+
+      <button id="btn-settings-close">Close</button>
+    </div>
+  </div>
+
+  <!-- SETUP / SIGN-IN SCREEN -->
+  <section id="screen-setup" class="screen active">
+    <p class="eyebrow"><span class="dot"></span> REACTION SCIENCE <span class="dot"></span></p>
+    <h1 class="title">Lights Out, Go!</h1>
+    <p class="sub">Test your reaction time like an F1 driver at the start line. Watch the lights — react the instant they go green.</p>
+
+    <div class="card-wrap">
+      <div class="card">
+
+        <label>Pick your avatar</label>
+        <div class="avatar-row" id="avatar-row"><!-- populated by JS --></div>
+
+        <label for="in-name">Player name</label>
+        <input type="text" id="in-name" placeholder="Full name" autocomplete="off" maxlength="40">
+
+        <div class="setup-row">
+          <div>
+            <label for="in-grade">Grade level</label>
+            <select id="in-grade">
+              <option value="" disabled selected>Select Grade</option>
+              <option value="7">Grade 7</option>
+              <option value="8">Grade 8</option>
+              <option value="9">Grade 9</option>
+              <option value="10">Grade 10</option>
+            </select>
+          </div>
+          <div>
+            <label for="in-section">Section</label>
+            <select id="in-section">
+              <option value="" disabled selected>Select Section</option>
+              <option value="ACACIA">ACACIA</option>
+              <option value="AGOHO">AGOHO</option>
+              <option value="ALAGAO">ALAGAO</option>
+              <option value="ALDER">ALDER</option>
+              <option value="ALMACIGA">ALMACIGA</option>
+              <option value="APITONG">APITONG</option>
+              <option value="BALAYONG">BALAYONG</option>
+              <option value="BANABA">BANABA</option>
+              <option value="BANUYO">BANUYO</option>
+              <option value="CANDLE TREE">CANDLE TREE</option>
+              <option value="CHESTNUT">CHESTNUT</option>
+              <option value="CINNAMON">CINNAMON</option>
+              <option value="CYPRESS">CYPRESS</option>
+              <option value="EUCALYPTUS">EUCALYPTUS</option>
+              <option value="FARM SCHOOL">FARM SCHOOL</option>
+              <option value="GMELINA">GMELINA</option>
+              <option value="IPIL">IPIL</option>
+              <option value="KAMAGONG">KAMAGONG</option>
+              <option value="LIPA">LIPA</option>
+              <option value="MAHOGANY">MAHOGANY</option>
+              <option value="MANGROVE">MANGROVE</option>
+              <option value="MAYAPIS">MAYAPIS</option>
+              <option value="MOLAVE">MOLAVE</option>
+              <option value="MULBERRY">MULBERRY</option>
+              <option value="NARRA">NARRA</option>
+              <option value="OAK">OAK</option>
+              <option value="PINE TREE">PINE TREE</option>
+              <option value="RYAN CAYABYAB">RYAN CAYABYAB</option>
+              <option value="TALISAY">TALISAY</option>
+              <option value="TANGUILE">TANGUILE</option>
+              <option value="TULIP">TULIP</option>
+              <option value="VIRGILIO ALMARIO">VIRGILIO ALMARIO</option>
+              <option value="YAKAL">YAKAL</option>
+              <option value="OTHERS">OTHERS</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+            <label for="in-teacher">Teacher</label>
+            <select id="in-teacher" required>
+              <option value="" disabled selected>Select Teacher</option>
+              <option value="Mark John R. Battad">Mark John R. Battad</option>
+              <option value="Shela May O. Barra">Shela May O. Barra</option>
+              <option value="Michelle E. Claveria">Michelle E. Claveria</option>
+              <option value="Renante C. Claveria">Renante C. Claveria</option>
+              <option value="Mylene P. Cojuangco">Mylene P. Cojuangco</option>
+              <option value="Rowena C. Cumal">Rowena C. Cumal</option>
+              <option value="Lovelyann B. Daniel">Lovelyann B. Daniel</option>
+              <option value="Sri Laine C. Parungao">Sri Laine C. Parungao</option>
+            </select>
+        </div>
+
+        <button class="btn" id="btn-start-setup">▶ Start Race</button>
+        <div class="setup-error" id="setup-error"></div>
+      </div>
+    </div>
+
+    <div class="lb-chip" id="btn-view-lb">🏆 View local leaderboard</div>
+  </section>
+
+  <!-- LOADING SCREEN (placeholder — hook your own transition here) -->
+  <section id="screen-loading" class="screen">
+    <p class="sub" style="margin-top:40vh;">Loading…</p>
+  </section>
+
+  <!-- RACE SCREEN -->
+  <section id="screen-race" class="screen">
+    <p class="eyebrow"><span class="dot"></span> LIGHTS OUT, GO! <span class="dot"></span></p>
+    <h1 class="title" style="font-size:24px;">Reaction Start Test</h1>
+
+    <div class="race-wrap">
+      <div class="trial-pill">
+        <span id="trial-label">Trial 1 of 5</span>
+        <div class="trial-dots" id="trial-dots"></div>
+      </div>
+
+      <div class="gantry">
+        <div class="lights-row">
+          <div class="light red" id="light-red"></div>
+          <div class="light orange" id="light-orange"></div>
+          <div class="light green" id="light-green"></div>
+        </div>
+      </div>
+
+      <div class="track">
+        <div class="flag-line"></div>
+        <div class="car" id="car">🏎️</div>
+      </div>
+      <p class="track-caption" id="track-caption">Tap LAUNCH to arm the start lights.</p>
+
+      <button id="btn-launch"><span id="btn-launch-label">🏁 LAUNCH</span><span class="key-hint">press SPACE or tap</span></button>
+    </div>
+  </section>
+
+  <!-- RESULT DIALOG (single trial) -->
+  <div id="result-overlay" class="result-modal" style="display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.55); align-items:center; justify-content:center; padding:20px;">
+    <div class="settings-modal">
+      <div id="result-tag" class="result-tag">Trial 1</div>
+      <h2 id="result-heading">Nice reaction!</h2>
+      <div class="result-time" id="result-time">—</div>
+      <div class="result-unit">milliseconds</div>
+      <div class="trivia-box" id="trivia-box">
+        <div class="trivia-label">🧠 Did you know?</div>
+        <p class="trivia-text" id="trivia-text"></p>
+      </div>
+      <button class="btn" id="btn-next-trial" style="margin-top:4px;">Next Trial ▶</button>
+    </div>
+  </div>
+
+  <!-- SUMMARY DIALOG (after 5 trials) -->
+  <div id="summary-overlay" class="result-modal" style="display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.55); align-items:center; justify-content:center; padding:20px;">
+    <div class="settings-modal">
+      <h2>🏆 Race Complete</h2>
+      <table class="summary-table" id="summary-table"></table>
+      <label style="text-align:center;">Average Reaction Time</label>
+      <div class="summary-avg" id="summary-avg">—</div>
+      <div class="result-unit">milliseconds — this is your score</div>
+      <div class="rank-box" id="rank-box">
+        <div class="rank-head">
+          <div class="rank-badge" id="rank-badge">–</div>
+          <div class="rank-title" id="rank-title">—</div>
+        </div>
+        <p class="rank-blurb" id="rank-blurb"></p>
+        <p class="rank-compare" id="rank-compare"></p>
+        <div class="rank-caution" id="rank-caution" style="display:none;"></div>
+      </div>
+      <button class="btn" id="btn-submit-score" style="margin-top:10px;">Submit Score</button>
+      <button id="btn-play-again" style="margin-top:8px;" onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <!--
+    ADD YOUR GAME'S OWN SCREENS BELOW THIS LINE.
+    Do not add a settings button to them — #btn-settings is fixed and
+    already visible everywhere.
+  -->
+
+</div>
+
+<script>
+/* ==================== CONFIG — EDIT THESE PER GAME ==================== */
+const GAME_ID   = "reaction-f1";           // short unique slug, e.g. "gland-balance"
+const GAME_TITLE = "Reaction Lights — F1 Start Challenge"; // human-readable name sent to the Master Record sheet
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7aB5zs9Q3OOtIT9vA7dHNplBXBTbeBSoLdYG9pLOWE4ftEmmYOO3Xh4CkMxJkYE4dYg/exec";
+// Master Record Web App URL shared across the game suite (same backend,
+// same teacher roster). Paste the existing shared URL here unless this
+// game needs its own sheet/back end.
+
+const AVATARS = ["🧑‍🔬","🦸","🧬","🔬","🚀","🧪","🦎","🌡️","🐸","🧫"];
+// Swap these for whatever fits the game's subject matter.
+
+const THEMES = [
+  { id:"meadow",         label:"Meadow",    swatch:"#10B981" },
+  { id:"nightlab",       label:"Night Lab", swatch:"#F5B301" },
+  { id:"coral-reef",     label:"Coral",     swatch:"#FB7185" },
+  { id:"grape-soda",     label:"Grape",     swatch:"#8B5CF6" },
+  { id:"solar-flare",    label:"Solar",     swatch:"#F97316" },
+  { id:"deep-ocean",     label:"Ocean",     swatch:"#0891B2" },
+  { id:"cyber-neon",     label:"Cyber",     swatch:"#22D3EE" },
+  { id:"cherry-blossom", label:"Sakura",    swatch:"#EC4899" }
+];
+const DEFAULT_THEME = "meadow";
+
+/* ==================== STATE ==================== */
+const $ = id => document.getElementById(id);
+const state = {
+  student: null,
+  musicOn: true,
+  sfxOn: true,
+  theme: DEFAULT_THEME,
+  selectedAvatar: AVATARS[0]
+};
+
+/* ==================== SETTINGS PERSISTENCE ==================== */
+function loadSettings(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(GAME_ID + "_settings"));
+    if(saved){
+      state.musicOn = saved.musicOn ?? true;
+      state.sfxOn   = saved.sfxOn ?? true;
+      state.theme   = saved.theme || DEFAULT_THEME;
+    }
+  }catch(e){}
+  applyTheme(state.theme);
+  syncSettingsUI();
+}
+function saveSettings(){
+  try{
+    localStorage.setItem(GAME_ID + "_settings", JSON.stringify({
+      musicOn: state.musicOn, sfxOn: state.sfxOn, theme: state.theme
+    }));
+  }catch(e){}
+}
+function applyTheme(themeId){
+  document.documentElement.setAttribute("data-theme", themeId);
+  state.theme = themeId;
+}
+
+/* ==================== SETTINGS MODAL ==================== */
+function buildThemeGrid(){
+  const wrap = $("theme-grid");
+  wrap.innerHTML = "";
+  THEMES.forEach(t=>{
+    const card = document.createElement("div");
+    card.className = "theme-card" + (t.id === state.theme ? " selected" : "");
+    card.innerHTML = `<div class="theme-swatch" style="background:${t.swatch}"><span class="check">✓</span></div><span class="theme-name">${t.label}</span>`;
+    card.addEventListener("click", ()=>{
+      applyTheme(t.id);
+      saveSettings();
+      buildThemeGrid();
+    });
+    wrap.appendChild(card);
+  });
+}
+function syncSettingsUI(){
+  $("btn-music-toggle").classList.toggle("on", state.musicOn);
+  $("btn-sfx-toggle").classList.toggle("on", state.sfxOn);
+  buildThemeGrid();
+}
+$("btn-settings").addEventListener("click", ()=>{
+  syncSettingsUI();
+  $("settings-overlay").classList.add("active");
+});
+$("btn-settings-close").addEventListener("click", ()=>{
+  $("settings-overlay").classList.remove("active");
+});
+$("settings-overlay").addEventListener("click", (e)=>{
+  if(e.target.id === "settings-overlay") $("settings-overlay").classList.remove("active");
+});
+$("btn-music-toggle").addEventListener("click", ()=>{
+  state.musicOn = !state.musicOn;
+  saveSettings();
+  syncSettingsUI();
+  // Hook your AudioEngine here, e.g. AudioEngine.setMusicOn(state.musicOn);
+  document.dispatchEvent(new CustomEvent("settings:musicChanged", { detail:{ on: state.musicOn }}));
+});
+$("btn-sfx-toggle").addEventListener("click", ()=>{
+  state.sfxOn = !state.sfxOn;
+  saveSettings();
+  syncSettingsUI();
+  document.dispatchEvent(new CustomEvent("settings:sfxChanged", { detail:{ on: state.sfxOn }}));
+});
+
+/* ==================== AVATAR PICKER ==================== */
+function buildAvatarRow(){
+  const wrap = $("avatar-row");
+  wrap.innerHTML = "";
+  AVATARS.forEach(a=>{
+    const btn = document.createElement("button");
+    btn.className = "avatar-btn" + (a === state.selectedAvatar ? " selected" : "");
+    btn.textContent = a;
+    btn.type = "button";
+    btn.addEventListener("click", ()=>{
+      state.selectedAvatar = a;
+      buildAvatarRow();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+/* ==================== SETUP SCREEN LOGIC ==================== */
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  $(id).classList.add("active");
+}
+window.addEventListener("load", ()=>{
+  loadSettings();
+  buildAvatarRow();
+  try{
+    const last = JSON.parse(localStorage.getItem(GAME_ID + "_lastStudent"));
+    if(last){
+      $("in-name").value = last.name || "";
+      $("in-grade").value = last.grade || "";
+      $("in-section").value = last.section || "";
+      if(last.teacher) $("in-teacher").value = last.teacher;
+      if(last.avatar){ state.selectedAvatar = last.avatar; buildAvatarRow(); }
+    }
+  }catch(e){}
+});
+
+$("btn-start-setup").addEventListener("click", ()=>{
+  const name = $("in-name").value.trim();
+  const grade = $("in-grade").value;
+  const section = $("in-section").value;
+  const teacher = $("in-teacher").value;
+  if(!name || !grade || !section || !teacher){
+    $("setup-error").textContent = "Please complete all fields.";
+    return;
+  }
+  $("setup-error").textContent = "";
+  state.student = { name, grade, section, teacher, avatar: state.selectedAvatar };
+  try{ localStorage.setItem(GAME_ID + "_lastStudent", JSON.stringify(state.student)); }catch(e){}
+
+  showScreen("screen-loading");
+  // Fire a custom event so the game-specific code (added below in your copy
+  // of this file) can pick up from here without touching this template logic.
+  document.dispatchEvent(new CustomEvent("game:start", { detail: state.student }));
+});
+
+/* ==================== MASTER RECORD SUBMISSION ====================
+   Call submitToMasterRecord({...fields}) from your game's results screen.
+   It always includes student/teacher/section/avatar context automatically. */
+function submitToMasterRecord(extraFields){
+  if(SCRIPT_URL.includes("PASTE_YOUR")){
+    console.warn("SCRIPT_URL not set — skipping Master Record submission.");
+    return Promise.resolve(null);
+  }
+  const formData = new FormData();
+  formData.append("game", GAME_ID);
+  formData.append("title", GAME_TITLE);        // human-readable quiz/game title
+  formData.append("quizTitle", GAME_TITLE);     // alias, in case the sheet script reads this key instead
+  formData.append("name", state.student?.name || "");
+  formData.append("studentName", state.student?.name || ""); // alias for "name"
+  formData.append("grade", state.student?.grade || "");
+  formData.append("section", state.student?.section || "");
+  formData.append("teacher", state.student?.teacher || "");
+  formData.append("avatar", state.student?.avatar || "");
+  Object.entries(extraFields || {}).forEach(([k,v])=> formData.append(k, v));
+
+  return fetch(SCRIPT_URL, { method:"POST", body: formData })
+    .then(res => res.text())
+    .catch(err => { console.error("Master Record submission failed:", err); return null; });
+}
+
+/* ==================== REACTION RACE GAME ==================== */
+const TOTAL_TRIALS = 5;
+const CAR_TRAVEL_MS = 900; // time for the car to cross the track after reacting
+
+const race = {
+  trial: 1,
+  times: [],          // completed reaction times (ms), one per trial
+  phase: "idle",       // idle -> armed -> red -> redOrange -> green -> reacted
+  greenAt: 0,
+  timeouts: []
+};
+
+const lightRed = $("light-red");
+const lightOrange = $("light-orange");
+const lightGreen = $("light-green");
+const btnLaunch = $("btn-launch");
+const btnLaunchLabel = $("btn-launch-label");
+const car = $("car");
+const trackCaption = $("track-caption");
+
+function clearRaceTimeouts(){
+  race.timeouts.forEach(t => clearTimeout(t));
+  race.timeouts = [];
+}
+function setLights(r, o, g){
+  lightRed.classList.toggle("lit", r);
+  lightOrange.classList.toggle("lit", o);
+  lightGreen.classList.toggle("lit", g);
+}
+function buildTrialDots(){
+  const wrap = $("trial-dots");
+  wrap.innerHTML = "";
+  for(let i = 1; i <= TOTAL_TRIALS; i++){
+    const d = document.createElement("div");
+    d.className = "trial-dot" + (i < race.trial ? " done" : (i === race.trial ? " current" : ""));
+    wrap.appendChild(d);
+  }
+}
+function updateTrialLabel(){
+  $("trial-label").textContent = `Trial ${race.trial} of ${TOTAL_TRIALS}`;
+  buildTrialDots();
+}
+
+function resetTrackVisual(){
+  car.style.transition = "none";
+  car.style.left = "0px";
+  car.style.transform = "translate(-10px,-50%)";
+  void car.offsetWidth; // force reflow so next transition applies cleanly
+  car.style.transition = "";
+}
+
+function armSequence(){
+  if(race.phase !== "idle") return;
+  clearRaceTimeouts();
+  resetTrackVisual();
+  setLights(false, false, false);
+  race.phase = "red";
+  btnLaunch.classList.add("armed");
+  btnLaunchLabel.textContent = "🔴 GET READY…";
+  trackCaption.textContent = "Watch the lights — click LAUNCH the instant it turns green.";
+
+  // Red comes on immediately
+  setLights(true, false, false);
+
+  race.timeouts.push(setTimeout(()=>{
+    race.phase = "redOrange";
+    setLights(true, true, false);
+  }, 1000));
+
+  const randomHold = 1000 + Math.random() * 2000; // 1-3s unpredictable hold, F1-style
+  race.timeouts.push(setTimeout(()=>{
+    race.phase = "green";
+    setLights(false, false, true);
+    btnLaunchLabel.textContent = "🟢 GO! LAUNCH NOW";
+    race.greenAt = performance.now();
+  }, 1000 + randomHold));
+}
+
+function jumpStart(){
+  clearRaceTimeouts();
+  setLights(true, true, false);
+  race.phase = "idle";
+  btnLaunch.classList.remove("armed");
+  btnLaunchLabel.textContent = "🏁 LAUNCH";
+  trackCaption.textContent = "Jump start! Wait for green this time.";
+  showResult({ jump:true });
+}
+
+function reactToGreen(){
+  const reactionMs = Math.round(performance.now() - race.greenAt);
+  race.phase = "reacted";
+  btnLaunch.disabled = true;
+  btnLaunch.classList.remove("armed");
+  btnLaunchLabel.textContent = "🏎️ RACING…";
+  trackCaption.textContent = "Go, go, go!";
+
+  const trackWidth = car.parentElement.clientWidth;
+  const carWidth = car.offsetWidth || 34;
+  car.style.transition = `left ${CAR_TRAVEL_MS}ms linear`;
+  requestAnimationFrame(()=>{
+    car.style.left = (trackWidth - carWidth - 4) + "px";
+  });
+
+  race.timeouts.push(setTimeout(()=>{
+    race.times.push(reactionMs);
+    showResult({ time: reactionMs });
+  }, CAR_TRAVEL_MS));
+}
+
+function onLaunchClick(){
+  if(race.phase === "idle"){
+    armSequence();
+  } else if(race.phase === "red" || race.phase === "redOrange"){
+    jumpStart();
+  } else if(race.phase === "green"){
+    reactToGreen();
+  }
+  // ignore clicks while "reacted" (car already animating) or mid-transition
+}
+btnLaunch.addEventListener("click", onLaunchClick);
+
+// Desktop: spacebar triggers the LAUNCH button, same as clicking/tapping it.
+document.addEventListener("keydown", (e)=>{
+  if(e.code !== "Space") return;
+  if(e.repeat) return; // ignore auto-repeat while held down
+  if($("screen-race").classList.contains("active") !== true) return;
+  if($("result-overlay").style.display === "flex" || $("summary-overlay").style.display === "flex") return;
+  e.preventDefault(); // stop page scroll / button re-click via native space activation
+  onLaunchClick();
+});
+
+/* ==================== NERVOUS SYSTEM TRIVIA ==================== */
+const TRIVIA_FACTS = [
+  "A neuron sends signals using electrical impulses called action potentials, which travel down its axon at speeds up to 120 meters per second.",
+  "The synapse is the tiny gap between two neurons where signals cross over — usually carried by chemical messengers called neurotransmitters.",
+  "An axon is the long, cable-like part of a neuron that carries outgoing signals away from the cell body toward the next neuron or muscle.",
+  "Dendrites are the branch-like extensions of a neuron that receive incoming signals from other neurons and pass them toward the cell body.",
+  "The optic nerve carries visual information from the retina straight to the brain, letting you turn light into sight.",
+  "The olfactory nerve handles your sense of smell, sending signals from receptors in your nose directly to the brain's smell-processing centers.",
+  "Taste signals travel mainly through the facial and glossopharyngeal nerves, which relay flavor information from your tongue to the brain.",
+  "The vestibulocochlear nerve manages both hearing and balance, carrying sound signals from the ear and info about head position.",
+  "Touch, pressure, and temperature signals from the skin travel to the brain through sensory nerves in the somatosensory system.",
+  "The sciatic nerve is the longest and widest nerve in the human body, running from the lower spine down through the hip and leg to the foot.",
+  "Most neurons in your body stop dividing after early development — they generally do not undergo mitosis like most other cells do.",
+  "The spinal cord can trigger a reflex action, like pulling your hand off something hot, before the signal even reaches your brain.",
+  "The human brain uses roughly 20% of the body's total oxygen supply, despite making up only about 2% of body weight.",
+  "Brain cells have no way to store oxygen, so being cut off from blood flow for just a few minutes can start causing serious, lasting damage.",
+  "Amnesia can affect memory in two directions: anterograde amnesia blocks forming new memories, while retrograde amnesia erases past ones.",
+  "Short-term memory typically holds about 7 items at once and fades within roughly 20 to 30 seconds unless it's rehearsed or reinforced.",
+  "Long-term memory can store information for years or even a lifetime, and its capacity is believed to be essentially limitless.",
+  "The brain contains around 86 billion neurons, each capable of forming thousands of connections with other neurons."
+];
+let triviaBag = [];
+function nextTrivia(){
+  if(triviaBag.length === 0){
+    triviaBag = TRIVIA_FACTS.map((_, i) => i);
+    // shuffle
+    for(let i = triviaBag.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [triviaBag[i], triviaBag[j]] = [triviaBag[j], triviaBag[i]];
+    }
+  }
+  const idx = triviaBag.pop();
+  return TRIVIA_FACTS[idx];
+}
+
+function ratingFor(ms){
+  if(ms < 200) return "Lightning ⚡";
+  if(ms < 300) return "F1 Reflexes 🏎️";
+  if(ms < 450) return "Solid Reaction 👍";
+  return "Keep Practicing 🐢";
+}
+
+/* ==================== RANK / COMPARISON CARD ==================== */
+// Reference points: average human visual reaction time is ~250ms.
+// Elite, world-class human reaction (sprinters, pro gamers, F1 drivers
+// off the lights) tops out around 100-150ms — the false-start limit in
+// sprinting is set at 100ms because nothing legit reacts faster than that.
+function getRanking(avgMs){
+  if(avgMs < 150){
+    return {
+      grade: "S",
+      title: "Cyborg Reflexes",
+      emoji: "🤖⚡",
+      blurb: "That's at or beyond the 100ms false-start limit sprinters get disqualified for. Either you're not human, or you somehow saw the light before it turned on.",
+      compare: "You: " + avgMs + "ms · Elite human ceiling: ~100–150ms · Average person: ~250ms"
+    };
+  }
+  if(avgMs < 200){
+    return {
+      grade: "A",
+      title: "Grid Starter",
+      emoji: "🏎️",
+      blurb: "This is proper Formula 1 territory — pros react to the lights in roughly 200ms. You'd hold your own on the starting grid.",
+      compare: "You: " + avgMs + "ms · F1 drivers: ~200ms · Average person: ~250ms"
+    };
+  }
+  if(avgMs < 260){
+    return {
+      grade: "B",
+      title: "Solid Human",
+      emoji: "🙂",
+      blurb: "Right around the average human reaction time of ~250ms. Perfectly respectable, gloriously average — the reflexes of someone who has never once been struck by lightning.",
+      compare: "You: " + avgMs + "ms · Average person: ~250ms"
+    };
+  }
+  if(avgMs < 380){
+    return {
+      grade: "C",
+      title: "Coffee Break Reflexes",
+      emoji: "☕",
+      blurb: "A little behind the ~250ms human average. Nothing alarming — but maybe it's time to cut back on the pre-race snacks and try again.",
+      compare: "You: " + avgMs + "ms · Average person: ~250ms"
+    };
+  }
+  return {
+    grade: "D",
+    title: "Extremely Chill",
+    emoji: "🐢",
+    blurb: "Well past the ~250ms average — your reflexes are currently operating on island time.",
+    compare: "You: " + avgMs + "ms · Average person: ~250ms",
+    caution: "⚠️ Friendly PSA: look both ways twice before crossing the street. At this speed, the crosswalk light will change faster than you will."
+  };
+}
+
+function renderRankBox(avgMs){
+  const r = getRanking(avgMs);
+  $("rank-badge").textContent = r.grade;
+  $("rank-title").textContent = `${r.emoji} ${r.title}`;
+  $("rank-blurb").textContent = r.blurb;
+  $("rank-compare").textContent = r.compare;
+  const cautionEl = $("rank-caution");
+  if(r.caution){
+    cautionEl.textContent = r.caution;
+    cautionEl.style.display = "block";
+  } else {
+    cautionEl.style.display = "none";
+  }
+}
+
+function showResult({ time, jump }){
+  const overlay = $("result-overlay");
+  const heading = $("result-heading");
+  const timeEl = $("result-time");
+  const tagEl = $("result-tag");
+  const nextBtn = $("btn-next-trial");
+
+  tagEl.textContent = `Trial ${race.trial} of ${TOTAL_TRIALS}`;
+
+  if(jump){
+    heading.textContent = "Jump Start!";
+    timeEl.textContent = "—";
+    $("result-time").nextElementSibling.textContent = "You launched before green. Try again.";
+    nextBtn.textContent = "Retry Trial ▶";
+    $("trivia-box").style.display = "none";
+  } else {
+    heading.textContent = ratingFor(time);
+    timeEl.textContent = time;
+    $("result-time").nextElementSibling.textContent = "milliseconds";
+    nextBtn.textContent = (race.trial < TOTAL_TRIALS) ? "Next Trial ▶" : "See Results 🏆";
+    $("trivia-text").textContent = nextTrivia();
+    $("trivia-box").style.display = "block";
+  }
+  overlay.style.display = "flex";
+  overlay.dataset.jump = jump ? "1" : "0";
+}
+
+$("btn-next-trial").addEventListener("click", ()=>{
+  $("result-overlay").style.display = "none";
+  const wasJump = $("result-overlay").dataset.jump === "1";
+  resetTrackVisual();
+  setLights(false, false, false);
+  btnLaunch.disabled = false;
+  btnLaunchLabel.textContent = "🏁 LAUNCH";
+  btnLaunch.classList.remove("armed");
+  trackCaption.textContent = "Tap LAUNCH to arm the start lights.";
+
+  if(!wasJump){
+    if(race.trial >= TOTAL_TRIALS){
+      showSummary();
+      return;
+    }
+    race.trial += 1;
+  }
+  race.phase = "idle";
+  updateTrialLabel();
+});
+
+function showSummary(){
+  const table = $("summary-table");
+  table.innerHTML = "";
+  race.times.forEach((t, i)=>{
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>Trial ${i+1}</td><td>${t} ms</td>`;
+    table.appendChild(row);
+  });
+  const avg = Math.round(race.times.reduce((a,b)=>a+b,0) / race.times.length);
+  $("summary-avg").textContent = avg;
+  renderRankBox(avg);
+  $("summary-overlay").style.display = "flex";
+  $("summary-overlay").dataset.avg = avg;
+}
+
+$("btn-submit-score").addEventListener("click", ()=>{
+  const btn = $("btn-submit-score");
+  const avg = $("summary-overlay").dataset.avg;
+  btn.disabled = true;
+  btn.textContent = "Submitting…";
+  submitToMasterRecord({
+    score: avg,               // average of 5 trials, in ms — lower is better
+    finalScore: avg,          // alias, in case the sheet script reads this key instead
+    trial1: race.times[0] ?? "",
+    trial2: race.times[1] ?? "",
+    trial3: race.times[2] ?? "",
+    trial4: race.times[3] ?? "",
+    trial5: race.times[4] ?? ""
+  }).then((result)=>{
+    if(result === null){
+      btn.textContent = "⚠ Submission Failed — Tap to Retry";
+      btn.disabled = false;
+    } else {
+      btn.textContent = "✔ Score Submitted";
+    }
+  });
+});
+
+/* Hook into the shared sign-in flow: fires once the player finishes setup */
+document.addEventListener("game:start", ()=>{
+  race.trial = 1;
+  race.times = [];
+  race.phase = "idle";
+  triviaBag = [];
+  updateTrialLabel();
+  resetTrackVisual();
+  setLights(false, false, false);
+  showScreen("screen-race");
+});
+</script>
+</body>
+</html>
